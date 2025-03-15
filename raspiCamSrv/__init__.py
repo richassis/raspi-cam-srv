@@ -10,8 +10,24 @@ import json
 import datetime
 import time
 from werkzeug.serving import is_running_from_reloader
+import threading
+from .home import take_raw_photo  # Importa a função take_raw_photo
+
+def start_timelapse():
+    # Cria um contexto de aplicação
+    with app.app_context():
+        # Cria um contexto de requisição
+        with app.test_request_context('/take_raw_photo', method='POST'):
+            # Chama a função take_raw_photo
+            take_raw_photo()
+
+def timelapse_thread():
+    while True:
+        start_timelapse()
+        time.sleep(1800)  # 1800 seconds = 30 minutes
 
 def create_app(test_config=None):
+    global app  # Torna a variável app global para ser usada em start_timelapse
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
@@ -216,5 +232,10 @@ def create_app(test_config=None):
             if sc.jwtRefreshTokenExpirationDays > 0:
                 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = datetime.timedelta(days=sc.jwtRefreshTokenExpirationDays)
             jwt = JWTManager(app)
+
+    # Start the timelapse thread
+    timelapse_thread_instance = threading.Thread(target=timelapse_thread)
+    timelapse_thread_instance.daemon = True
+    timelapse_thread_instance.start()
 
     return app
