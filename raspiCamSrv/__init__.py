@@ -13,6 +13,21 @@ from werkzeug.serving import is_running_from_reloader
 import threading
 from .home import take_raw_photo  # Importa a função take_raw_photo
 
+# Configura o logger para timelapse
+timelapse_logger = logging.getLogger('timelapse')
+timelapse_logger.setLevel(logging.INFO)
+
+# Cria um handler para escrever os logs em um arquivo
+timelapse_log_handler = logging.FileHandler('timelapse.log')
+timelapse_log_handler.setLevel(logging.INFO)
+
+# Cria um formatter e adiciona ao handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+timelapse_log_handler.setFormatter(formatter)
+
+# Adiciona o handler ao logger
+timelapse_logger.addHandler(timelapse_log_handler)
+
 def start_timelapse():
     timelapse_logger.info("Iniciando timelapse")
     # Cria um contexto de aplicação
