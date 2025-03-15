@@ -14,16 +14,21 @@ import threading
 from .home import take_raw_photo  # Importa a função take_raw_photo
 
 def start_timelapse():
+    timelapse_logger.info("Iniciando timelapse")
     # Cria um contexto de aplicação
     with app.app_context():
         # Cria um contexto de requisição
         with app.test_request_context('/take_raw_photo', method='POST'):
             # Chama a função take_raw_photo
+            timelapse_logger.info("Executando take_raw_photo")
             take_raw_photo()
+            timelapse_logger.info("Função take_raw_photo executada com sucesso")
 
 def timelapse_thread():
     while True:
+        timelapse_logger.info("Executando start_timelapse")
         start_timelapse()
+        timelapse_logger.info("Função start_timelapse executada com sucesso")
         time.sleep(1800)  # 1800 seconds = 30 minutes
 
 def create_app(test_config=None):
@@ -48,6 +53,16 @@ def create_app(test_config=None):
     Path(logFile).touch(exist_ok=True)
     filehandler = logging.FileHandler(logFile)
     filehandler.setFormatter(app.logger.handlers[0].formatter)
+
+    # Configura o logger para timelapse
+    timelapseLogFile = logsPath + "/timelapse.log"
+    Path(timelapseLogFile).touch(exist_ok=True)
+    timelapse_filehandler = logging.FileHandler(timelapseLogFile)
+    timelapse_filehandler.setFormatter(app.logger.handlers[0].formatter)
+    timelapse_logger = logging.getLogger("timelapse")
+    timelapse_logger.setLevel(logging.INFO)
+    timelapse_logger.addHandler(timelapse_filehandler)
+
     for logger in(
         app.logger,
         logging.getLogger("werkzeug"),
@@ -69,6 +84,7 @@ def create_app(test_config=None):
         logging.getLogger("raspiCamSrv.webcam"),
         logging.getLogger("raspiCamSrv.sun"),
         logging.getLogger("raspiCamSrv.api"),
+        timelapse_logger,  # Adiciona o logger de timelapse à lista
     ):
         logger.setLevel(logging.ERROR)
 
