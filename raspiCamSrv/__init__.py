@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from flask import Flask
+from flask import Flask, g
 import logging
 from flask.logging import default_handler
 from picamera2 import Picamera2
@@ -13,37 +13,40 @@ from werkzeug.serving import is_running_from_reloader
 import threading
 from .home import take_raw_photo  # Importa a função take_raw_photo
 
-# Configura o logger para timelapse
-timelapse_logger = logging.getLogger('timelapse')
-timelapse_logger.setLevel(logging.INFO)
-
-# Cria um handler para escrever os logs em um arquivo
-timelapse_log_handler = logging.FileHandler('timelapse.log')
-timelapse_log_handler.setLevel(logging.INFO)
-
-# Cria um formatter e adiciona ao handler
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-timelapse_log_handler.setFormatter(formatter)
-
-# Adiciona o handler ao logger
-timelapse_logger.addHandler(timelapse_log_handler)
-
-def start_timelapse():
-    timelapse_logger.info("Iniciando timelapse")
+def start_timelapse(logger):
+    logTime = str(datetime.datetime.now())
+    logger.debug(logTime + ": Iniciando timelapse")
     # Cria um contexto de aplicação
     with app.app_context():
+        # Define um usuário simulado
+        g.user = {'id': 1, 'username': 'stihl', 'issuperuser': 1, 'isinitial': 0}
         # Cria um contexto de requisição
         with app.test_request_context('/take_raw_photo', method='POST'):
             # Chama a função take_raw_photo
-            timelapse_logger.info("Executando take_raw_photo")
+            logger.debug(logTime + ": Executando take_raw_photo")
             take_raw_photo()
-            timelapse_logger.info("Função take_raw_photo executada com sucesso")
+            logger.debug(logTime + ": Função take_raw_photo executada com sucesso")
 
 def timelapse_thread():
+
+    logger = logging.getLogger("pc2_prg")
+    logPath = os.path.dirname(app.instance_path) + "/logs"
+    logFilename = "timelapse.log"
+    logFile = logPath+ "/" + logFilename
+    #>>>>> Uncomment the following 5 lines when code generation is activated (see below)
+    Path(logFile).touch(exist_ok=True)
+    fileHandler = logging.FileHandler(logFile)
+    formatter = logging.Formatter('%(message)s')
+    fileHandler.setFormatter(formatter)
+    logger.addHandler(fileHandler)
+
+    # Adiciona um atraso de 1 minuto
+    time.sleep(60)
     while True:
-        timelapse_logger.info("Executando start_timelapse")
-        start_timelapse()
-        timelapse_logger.info("Função start_timelapse executada com sucesso")
+        logTime = str(datetime.datetime.now())
+        logger.debug(logTime + ": Executando start_timelapse")
+        start_timelapse(logger)
+        logger.debug(logTime + ": Função start_timelapse executada com sucesso")
         time.sleep(1800)  # 1800 seconds = 30 minutes
 
 def create_app(test_config=None):
@@ -69,15 +72,6 @@ def create_app(test_config=None):
     filehandler = logging.FileHandler(logFile)
     filehandler.setFormatter(app.logger.handlers[0].formatter)
 
-    # Configura o logger para timelapse
-    timelapseLogFile = logsPath + "/timelapse.log"
-    Path(timelapseLogFile).touch(exist_ok=True)
-    timelapse_filehandler = logging.FileHandler(timelapseLogFile)
-    timelapse_filehandler.setFormatter(app.logger.handlers[0].formatter)
-    timelapse_logger = logging.getLogger("timelapse")
-    timelapse_logger.setLevel(logging.INFO)
-    timelapse_logger.addHandler(timelapse_filehandler)
-
     for logger in(
         app.logger,
         logging.getLogger("werkzeug"),
@@ -99,7 +93,6 @@ def create_app(test_config=None):
         logging.getLogger("raspiCamSrv.webcam"),
         logging.getLogger("raspiCamSrv.sun"),
         logging.getLogger("raspiCamSrv.api"),
-        timelapse_logger,  # Adiciona o logger de timelapse à lista
     ):
         logger.setLevel(logging.ERROR)
 
@@ -141,11 +134,11 @@ def create_app(test_config=None):
     prgLogFilename = "prgLog_" + prgLogTime.strftime("%Y%m%d_%H%M%S") + ".log"
     prgLogFile = prgLogPath+ "/" + prgLogFilename
     #>>>>> Uncomment the following 5 lines when code generation is activated (see below)
-    #Path(prgLogFile).touch(exist_ok=True)
-    #prgFilehandler = logging.FileHandler(prgLogFile)
-    #prgFormatter = logging.Formatter('%(message)s')
-    #prgFilehandler.setFormatter(prgFormatter)
-    #prgLogger.addHandler(prgFilehandler)
+    Path(prgLogFile).touch(exist_ok=True)
+    prgFilehandler = logging.FileHandler(prgLogFile)
+    prgFormatter = logging.Formatter('%(message)s')
+    prgFilehandler.setFormatter(prgFormatter)
+    prgLogger.addHandler(prgFilehandler)
     #>>>>> To activate Python code generation, set level to DEBUG
     #prgLogger.setLevel(logging.DEBUG)
 
